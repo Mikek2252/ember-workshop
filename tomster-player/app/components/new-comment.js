@@ -1,13 +1,19 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
+import { or } from '@ember/object/computed';
 import { inject } from '@ember/service';
+import { validator, buildValidations } from 'ember-cp-validations';
 
-export default Component.extend({
+const Validations = buildValidations({
+  rating:validator('presence', true),
+  text: validator('presence', true)
+});
+
+export default Component.extend(Validations, {
   store: inject(),
+  showRatingValidation: or('showValidations', 'ratingInputUsed'),
+  showMessageValidation: or('showValidations', 'messageInputUsed'),
 
-  submitDisabled: computed('rating', 'text', function() {
-    return !this.rating || !this.text;
-  }),
 
   ratingOptions: computed('rating', function() {
     return [
@@ -35,14 +41,18 @@ export default Component.extend({
 
     async createComment(event) {
       event.preventDefault();
-
-      let comment = this.store.createRecord('comment', {
-        album: this.album,
-        text: this.text,
-        rating: this.rating
-      });
-      await comment.save();
-      this.setProperties({ rating: null, text: null });
+      if (this.validations.isValid) {
+        this.set('showValidations', false);
+        let comment = this.store.createRecord('comment', {
+          album: this.album,
+          text: this.text,
+          rating: this.rating
+        });
+        await comment.save();
+        this.setProperties({ rating: null, text: null });
+      } else {
+        this.set('showValidations', true);
+      }
     }
   }
 });
